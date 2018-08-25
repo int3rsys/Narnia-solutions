@@ -12,8 +12,7 @@ Well, I think that there are plany well written solutions for this level. I woul
 To solve this level, we need to know assembly, x86 in this case (typing "lscpu" will reveal us the architecture and byte order, which are **important** for out shellcode). There are planty writeup's for this level, which most of them are incorrect (but I do recommand reading them in order to understand what is wrong), however. Moreover, I would advise you to learn how to write a shellcode in linux, because copying and pasting a shellcode from shell storm won't work in this case. So after we figure out that there is a buffer overflow with the enviromental variable, we want to inject our shellcode. Remeber, no null bytes and illegal chars!
 Because spawning a regular shell won't work (the shell will be privileged with narnia1 user), we want to use the our vulnerability to open narnia2 password file. Let's dive into our shell code:
 
-`
-section .text
+`section .text
 	global _start
 
 _start:
