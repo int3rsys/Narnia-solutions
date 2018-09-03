@@ -106,7 +106,9 @@ Let's get the password:
 and...........wallah:
 vaequeezee
 
-
+## Narnia 3-4
+I don't think there is something special in these excercises. There are great write ups for them: http://tutorialsjunkie.blogspot.com/2018/02/overthewire-narnia-walkthrough.html
+Side note: narnia4 uses a nope slide, which is an important technique to master.
 
 
 
